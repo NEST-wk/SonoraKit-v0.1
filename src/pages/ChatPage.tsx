@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import DarkVeil from '../components/DarkVeil';
+import Logo from '../assets/logos/file.svg';
 import './ChatPage.css';
 
 interface Message {
@@ -39,6 +41,7 @@ const ChatPage: React.FC = () => {
     const [providers, setProviders] = useState<Provider[]>([]);
     const [availableModels, setAvailableModels] = useState<Model[]>([]);
     const [loadingModels, setLoadingModels] = useState(false);
+    const [showProfileDropdown, setShowProfileDropdown] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -105,7 +108,7 @@ const ChatPage: React.FC = () => {
 
     const handleSendMessage = useCallback(async () => {
         if (!inputMessage.trim() || isLoading) return;
-        
+
         if (!modelConfig.apiKey) {
             alert('Por favor configura tu API key primero');
             setShowConfig(true);
@@ -145,7 +148,7 @@ const ChatPage: React.FC = () => {
             if (!response.ok) throw new Error('Error en la respuesta');
 
             const data = await response.json();
-            
+
             const assistantMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
@@ -183,33 +186,68 @@ const ChatPage: React.FC = () => {
         navigate('/');
     }, [navigate]);
 
+    const handleViewProfile = useCallback(() => {
+        navigate('/profile');
+    }, [navigate]);
+
     return (
         <div className="chat-page">
             {/* Sidebar */}
             <aside className="chat-sidebar">
                 <div className="sidebar-header">
-                    <h2>SonoraKit</h2>
+                    <img src={Logo} alt="SonoraKit Logo" className="sidebar-logo" />
                 </div>
 
                 <div className="sidebar-content">
                     <button className="sidebar-btn" onClick={() => setMessages([])}>
                         + Nueva Conversación
                     </button>
-                    
+
                     <button className="sidebar-btn" onClick={() => setShowConfig(true)}>
                         ⚙️ Configuración
                     </button>
                 </div>
 
                 <div className="sidebar-footer">
-                    <button className="sidebar-btn logout" onClick={handleLogout}>
-                        🚪 Cerrar Sesión
-                    </button>
+                    <div className="profile-section">
+                        <button
+                            className="profile-btn"
+                            onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                        >
+                            <div className="profile-icon">👤</div>
+                            <div className="profile-info">
+                                <span className="profile-name">Usuario</span>
+                                <span className="profile-email">user@example.com</span>
+                            </div>
+                            <span className="dropdown-arrow">{showProfileDropdown ? '▲' : '▼'}</span>
+                        </button>
+
+                        {showProfileDropdown && (
+                            <div className="profile-dropdown">
+                                <button className="dropdown-item" onClick={handleViewProfile}>
+                                    👁️ Ver Perfil
+                                </button>
+                                <button className="dropdown-item logout" onClick={handleLogout}>
+                                    🚪 Cerrar Sesión
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </aside>
 
             {/* Main Chat Area */}
             <main className="chat-main">
+                {/* Background DarkVeil */}
+                <div className="chat-background">
+                    <DarkVeil
+                        speed={1.2}
+                        hueShift={280}
+                        warpAmount={0.2}
+                        scanlineIntensity={0.3}
+                    />
+                </div>
+
                 <div className="chat-messages">
                     {messages.length === 0 ? (
                         <div className="empty-state">
@@ -247,7 +285,7 @@ const ChatPage: React.FC = () => {
                         rows={1}
                         disabled={isLoading}
                     />
-                    <button 
+                    <button
                         className="send-button"
                         onClick={handleSendMessage}
                         disabled={isLoading || !inputMessage.trim()}
@@ -262,13 +300,13 @@ const ChatPage: React.FC = () => {
                 <div className="modal-overlay" onClick={() => setShowConfig(false)}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <h2>Configuración del Modelo</h2>
-                        
+
                         <div className="form-group">
                             <label>Proveedor</label>
                             <select
                                 value={modelConfig.provider}
-                                onChange={(e) => setModelConfig(prev => ({ 
-                                    ...prev, 
+                                onChange={(e) => setModelConfig(prev => ({
+                                    ...prev,
                                     provider: e.target.value,
                                     model: '' // Reset model when provider changes
                                 }))}
@@ -290,11 +328,11 @@ const ChatPage: React.FC = () => {
                                 disabled={!modelConfig.provider || loadingModels}
                             >
                                 <option value="">
-                                    {!modelConfig.provider 
-                                        ? 'Primero selecciona un proveedor' 
-                                        : loadingModels 
-                                        ? 'Cargando modelos...' 
-                                        : 'Selecciona un modelo'}
+                                    {!modelConfig.provider
+                                        ? 'Primero selecciona un proveedor'
+                                        : loadingModels
+                                            ? 'Cargando modelos...'
+                                            : 'Selecciona un modelo'}
                                 </option>
                                 {availableModels?.map(model => (
                                     <option key={model.id} value={model.id}>

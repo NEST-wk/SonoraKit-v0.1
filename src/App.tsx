@@ -7,6 +7,7 @@ const LandingPage = lazy(() => import('./pages/LandingPage'))
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ChatPage = lazy(() => import('./pages/ChatPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 
 // Componente de carga mientras se cargan las páginas
 const LoadingFallback = () => (
@@ -32,6 +33,7 @@ function App() {
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/chat" element={<ChatPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
                 </Routes>
             </Suspense>
         </Router>
