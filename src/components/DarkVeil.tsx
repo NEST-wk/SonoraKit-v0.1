@@ -63,7 +63,17 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     uv.y*=-1.;
     // Aplicar offset vertical al efecto
     uv.y += uVerticalOffset;
-    uv+=uWarp*vec2(sin(uv.y*6.283+uTime*0.5),cos(uv.x*6.283+uTime*0.5))*0.05;
+    // Distorsión más extrema y compleja
+    float time = uTime * 0.5;
+    uv += uWarp * vec2(
+        sin(uv.y * 8.0 + time) * cos(uv.x * 4.0 + time * 0.7),
+        cos(uv.x * 8.0 + time * 0.8) * sin(uv.y * 4.0 + time * 0.6)
+    ) * 0.15;
+    // Capa adicional de distorsión rotatoria
+    float angle = uWarp * (sin(time * 0.3) * 3.14159);
+    float c = cos(angle * length(uv));
+    float s = sin(angle * length(uv));
+    uv = vec2(uv.x * c - uv.y * s, uv.x * s + uv.y * c);
     fragColor=cppn_fn(uv,0.1*sin(0.3*uTime),0.1*sin(0.69*uTime),0.1*sin(0.44*uTime));
 }
 
