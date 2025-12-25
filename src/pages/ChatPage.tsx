@@ -4,6 +4,7 @@ import DarkVeil from '../components/DarkVeil';
 import MinimalMenu from '../components/MinimalMenu';
 import { useTheme } from '../hooks/useTheme';
 import { configService } from '../services/configService';
+import { authService } from '../services/authService';
 import Logo from '../assets/logos/file.svg';
 import './ChatPage.css';
 
@@ -321,8 +322,13 @@ const ChatPage: React.FC = () => {
     }, [modelConfig]);
 
     const handleLogout = useCallback(async () => {
-        await configService.deleteConfig();
-        navigate('/');
+        // Cerrar sesión de Supabase
+        await authService.logout();
+        // Limpiar localStorage
+        localStorage.removeItem('user');
+        localStorage.removeItem('conversations');
+        // Redirigir al login
+        navigate('/login');
     }, [navigate]);
 
     const handleViewProfile = useCallback(() => {
