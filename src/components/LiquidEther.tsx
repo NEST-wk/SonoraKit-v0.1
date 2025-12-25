@@ -64,7 +64,7 @@ function LiquidEther({
     iterationsPoisson = 32,
     dt = 0.014,
     BFECC = true,
-    resolution = 0.5,
+    resolution = 0.25, // Reducido de 0.5 a 0.25 para menos uso de memoria
     isBounce = false,
     colors = defaultColors,
     style = {},
@@ -83,6 +83,10 @@ function LiquidEther({
     const intersectionObserverRef = useRef<IntersectionObserver | null>(null);
     const isVisibleRef = useRef<boolean>(true);
     const resizeRafRef = useRef<number | null>(null);
+
+    // Detectar dispositivo móvil y ajustar resolución
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const optimizedResolution = isMobile ? resolution * 0.5 : resolution; // Reducir resolución a la mitad en móviles
 
     useEffect(() => {
         if (!mountRef.current) return;
@@ -1122,13 +1126,52 @@ function LiquidEther({
             }
             dispose() {
                 try {
+                    // Stop animation loop
+                    this.pause();
+                    
+                    // Remove event listeners
                     window.removeEventListener('resize', this._resize);
                     if (this._onVisibility) document.removeEventListener('visibilitychange', this._onVisibility);
                     Mouse.dispose();
+                    
+                    // Dispose simulation resources
+                    if (this.output?.simulation) {
+                        const sim = this.output.simulation as any;
+                        // Dispose framebuffers and textures
+                        if (sim.fbo_adv0) sim.fbo_adv0.dispose();
+                        if (sim.fbo_adv1) sim.fbo_adv1.dispose();
+                        if (sim.fbo_pressure0) sim.fbo_pressure0.dispose();
+                        if (sim.fbo_pressure1) sim.fbo_pressure1.dispose();
+                        if (sim.fbo_velocity0) sim.fbo_velocity0.dispose();
+                        if (sim.fbo_velocity1) sim.fbo_velocity1.dispose();
+                        if (sim.fbo_divergence) sim.fbo_divergence.dispose();
+                    }
+                    
+                    // Dispose renderer and WebGL context
                     if (Common.renderer) {
+                        const gl = Common.renderer.getContext();
                         const canvas = Common.renderer.domElement;
-                        if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+                        
+                        // Force context loss to release GPU resources
+                        const loseContext = gl.getExtension('WEBGL_lose_context');
+                        if (loseContext) {
+                            loseContext.loseContext();
+                        }
+                        
+                        // Remove canvas from DOM
+                        if (canvas && canvas.parentNode) {
+                            canvas.parentNode.removeChild(canvas);
+                        }
+                        
+                        // Dispose renderer
                         Common.renderer.dispose();
+                        Common.renderer = null;
+                    }
+                    
+                    // Clear clock
+                    if (Common.clock) {
+                        Common.clock.stop();
+                        Common.clock = null;
                     }
                 } catch {
                     /* noop */
@@ -1165,10 +1208,10 @@ function LiquidEther({
                 iterations_poisson: iterationsPoisson,
                 dt,
                 BFECC,
-                resolution,
+                resolution: optimizedResolution, // Usar resolución optimizada
                 isBounce
             });
-            if (resolution !== prevRes) sim.resize();
+            if (optimizedResolution !== prevRes) sim.resize();
         };
         applyOptionsFromProps();
         webgl.start();
@@ -1231,7 +1274,7 @@ function LiquidEther({
         iterationsPoisson,
         iterationsViscous,
         mouseForce,
-        resolution,
+        optimizedResolution, // Usar resolución optimizada
         viscous,
         colors,
         autoDemo,
