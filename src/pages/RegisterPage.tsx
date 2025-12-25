@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LiquidEther from '../components/LiquidEther';
+import LiquidEtherSafe from '../components/LiquidEtherSafe';
 import AnimatedContent from '../components/AnimatedContent';
 import { authService } from '../services/authService';
 import './RegisterPage.css';
@@ -65,7 +65,7 @@ const RegisterPage: React.FC = () => {
 
     return (
         <div className="register-container">
-            <LiquidEther
+            <LiquidEtherSafe
                 className="register-background"
                 colors={['#5227FF', '#FF9FFC', '#B19EEF']}
                 mouseForce={15}

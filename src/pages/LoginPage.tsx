@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LiquidEther from '../components/LiquidEther';
+import LiquidEtherSafe from '../components/LiquidEtherSafe';
 import AnimatedContent from '../components/AnimatedContent';
 import { authService } from '../services/authService';
 import './LoginPage.css';
@@ -56,7 +56,7 @@ const LoginPage: React.FC = () => {
 
     return (
         <div className="login-container">
-            <LiquidEther
+            <LiquidEtherSafe
                 className="login-background"
                 colors={['#5227FF', '#FF9FFC', '#B19EEF']}
                 mouseForce={15}
