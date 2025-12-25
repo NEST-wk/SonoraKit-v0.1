@@ -16,6 +16,13 @@ interface Message {
     timestamp: Date;
 }
 
+interface Conversation {
+    id: string;
+    title: string;
+    messages: Message[];
+    lastUpdated: Date;
+}
+
 interface ModelConfig {
     provider: string;
     model: string;
@@ -48,7 +55,91 @@ const ChatPage: React.FC = () => {
     const [availableModels, setAvailableModels] = useState<Model[]>([]);
     const [loadingModels, setLoadingModels] = useState(false);
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Cargar conversaciones guardadas al iniciar
+    useEffect(() => {
+        const savedConversations = localStorage.getItem('conversations');
+        if (savedConversations) {
+            const parsed = JSON.parse(savedConversations);
+            // Convertir strings de fecha a objetos Date
+            const conversationsWithDates = parsed.map((conv: any) => ({
+                ...conv,
+                lastUpdated: new Date(conv.lastUpdated),
+                messages: conv.messages.map((msg: any) => ({
+                    ...msg,
+                    timestamp: new Date(msg.timestamp)
+                }))
+            }));
+            setConversations(conversationsWithDates);
+            
+            // Cargar la última conversación
+            if (conversationsWithDates.length > 0) {
+                const lastConv = conversationsWithDates[0];
+                setCurrentConversationId(lastConv.id);
+                setMessages(lastConv.messages);
+            }
+        }
+    }, []);
+
+    // Guardar conversación actual cuando cambian los mensajes
+    useEffect(() => {
+        if (messages.length > 0) {
+            saveCurrentConversation();
+        }
+    }, [messages]);
+
+    const saveCurrentConversation = () => {
+        if (messages.length === 0) return;
+
+        const title = messages[0]?.content.slice(0, 50) || 'Nueva conversación';
+        
+        const updatedConversations = [...conversations];
+        const existingIndex = updatedConversations.findIndex(c => c.id === currentConversationId);
+
+        const conversation: Conversation = {
+            id: currentConversationId || Date.now().toString(),
+            title,
+            messages,
+            lastUpdated: new Date()
+        };
+
+        if (existingIndex >= 0) {
+            updatedConversations[existingIndex] = conversation;
+        } else {
+            updatedConversations.unshift(conversation);
+            setCurrentConversationId(conversation.id);
+        }
+
+        setConversations(updatedConversations);
+        localStorage.setItem('conversations', JSON.stringify(updatedConversations));
+    };
+
+    const loadConversation = (conversationId: string) => {
+        const conv = conversations.find(c => c.id === conversationId);
+        if (conv) {
+            setCurrentConversationId(conv.id);
+            setMessages(conv.messages);
+        }
+    };
+
+    const deleteConversation = (conversationId: string) => {
+        const updatedConversations = conversations.filter(c => c.id !== conversationId);
+        setConversations(updatedConversations);
+        localStorage.setItem('conversations', JSON.stringify(updatedConversations));
+        
+        if (currentConversationId === conversationId) {
+            setCurrentConversationId(null);
+            setMessages([]);
+        }
+    };
+
+    const startNewConversation = () => {
+        setCurrentConversationId(null);
+        setMessages([]);
+    };
 
     useEffect(() => {
         // Verificar si hay configuración guardada
@@ -205,9 +296,43 @@ const ChatPage: React.FC = () => {
                 </div>
 
                 <div className="sidebar-content">
-                    <button className="sidebar-btn" onClick={() => setMessages([])}>
+                    <button className="sidebar-btn" onClick={startNewConversation}>
                         + Nueva Conversación
                     </button>
+
+                    <div className="conversations-list">
+                        <h3 className="conversations-title">Historial</h3>
+                        {conversations.length === 0 ? (
+                            <p className="empty-conversations">No hay conversaciones guardadas</p>
+                        ) : (
+                            conversations.map(conv => (
+                                <div
+                                    key={conv.id}
+                                    className={`conversation-item ${currentConversationId === conv.id ? 'active' : ''}`}
+                                >
+                                    <button
+                                        className="conversation-btn"
+                                        onClick={() => loadConversation(conv.id)}
+                                        title={conv.title}
+                                    >
+                                        {conv.title}
+                                    </button>
+                                    <button
+                                        className="delete-btn"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (confirm('¿Eliminar esta conversación?')) {
+                                                deleteConversation(conv.id);
+                                            }
+                                        }}
+                                        title="Eliminar"
+                                    >
+                                        🗑️
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                    </div>
 
                     <button className="sidebar-btn" onClick={() => setShowConfig(true)}>
                         ⚙️ Configuración
