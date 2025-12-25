@@ -6,6 +6,9 @@ import { useTheme } from '../hooks/useTheme';
 import Logo from '../assets/logos/file.svg';
 import './ChatPage.css';
 
+// API URL - usa la variable de entorno o localhost como fallback
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 interface Message {
     id: string;
     role: 'user' | 'assistant' | 'system';
@@ -75,7 +78,7 @@ const ChatPage: React.FC = () => {
 
     const fetchProviders = async () => {
         try {
-            const response = await fetch('http://localhost:8000/api/providers');
+            const response = await fetch(`${API_URL}/api/providers`);
             if (!response.ok) throw new Error('Error al cargar proveedores');
             const data = await response.json();
             setProviders(data.providers || []);
@@ -97,7 +100,7 @@ const ChatPage: React.FC = () => {
     const fetchModels = async (provider: string) => {
         setLoadingModels(true);
         try {
-            const response = await fetch(`http://localhost:8000/api/models/${provider}`);
+            const response = await fetch(`${API_URL}/api/models/${provider}`);
             if (!response.ok) throw new Error('Error al cargar modelos');
             const data = await response.json();
             setAvailableModels(data.models || []);
@@ -136,7 +139,7 @@ const ChatPage: React.FC = () => {
                 content: msg.content
             }));
 
-            const response = await fetch('http://localhost:8000/api/chat', {
+            const response = await fetch(`${API_URL}/api/chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
