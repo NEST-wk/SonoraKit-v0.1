@@ -59,90 +59,9 @@ const ChatPage: React.FC = () => {
     const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Cargar conversaciones guardadas al iniciar
+    // Cargar conversaciones y configuración guardadas al iniciar
     useEffect(() => {
-        const savedConversations = localStorage.getItem('conversations');
-        if (savedConversations) {
-            const parsed = JSON.parse(savedConversations);
-            // Convertir strings de fecha a objetos Date
-            const conversationsWithDates = parsed.map((conv: Conversation) => ({
-                ...conv,
-                lastUpdated: new Date(conv.lastUpdated),
-                messages: conv.messages.map((msg: Message) => ({
-                    ...msg,
-                    timestamp: new Date(msg.timestamp)
-                }))
-            }));
-            setConversations(conversationsWithDates);
-            
-            // Cargar la última conversación
-            if (conversationsWithDates.length > 0) {
-                const lastConv = conversationsWithDates[0];
-                setCurrentConversationId(lastConv.id);
-                setMessages(lastConv.messages);
-            }
-        }
-    }, []);
-
-    const saveCurrentConversation = useCallback(() => {
-        if (messages.length === 0) return;
-
-        const title = messages[0]?.content.slice(0, 50) || 'Nueva conversación';
-        
-        const updatedConversations = [...conversations];
-        const existingIndex = updatedConversations.findIndex(c => c.id === currentConversationId);
-
-        const conversation: Conversation = {
-            id: currentConversationId || Date.now().toString(),
-            title,
-            messages,
-            lastUpdated: new Date()
-        };
-
-        if (existingIndex >= 0) {
-            updatedConversations[existingIndex] = conversation;
-        } else {
-            updatedConversations.unshift(conversation);
-            setCurrentConversationId(conversation.id);
-        }
-
-        setConversations(updatedConversations);
-        localStorage.setItem('conversations', JSON.stringify(updatedConversations));
-    }, [messages, conversations, currentConversationId]);
-
-    // Guardar conversación actual cuando cambian los mensajes
-    useEffect(() => {
-        if (messages.length > 0) {
-            saveCurrentConversation();
-        }
-    }, [messages, saveCurrentConversation]);
-
-    const loadConversation = (conversationId: string) => {
-        const conv = conversations.find(c => c.id === conversationId);
-        if (conv) {
-            setCurrentConversationId(conv.id);
-            setMessages(conv.messages);
-        }
-    };
-
-    const deleteConversation = (conversationId: string) => {
-        const updatedConversations = conversations.filter(c => c.id !== conversationId);
-        setConversations(updatedConversations);
-        localStorage.setItem('conversations', JSON.stringify(updatedConversations));
-        
-        if (currentConversationId === conversationId) {
-            setCurrentConversationId(null);
-            setMessages([]);
-        }
-    };
-
-    const startNewConversation = () => {
-        setCurrentConversationId(null);
-        setMessages([]);
-    };
-
-    useEffect(() => {
-        // Verificar si hay configuración guardada
+        // Cargar configuración del modelo
         const savedConfig = localStorage.getItem('modelConfig');
         if (savedConfig) {
             setModelConfig(JSON.parse(savedConfig));
@@ -150,9 +69,113 @@ const ChatPage: React.FC = () => {
             setShowConfig(true);
         }
 
+        // Cargar conversaciones
+        const savedConversations = localStorage.getItem('conversations');
+        if (savedConversations) {
+            try {
+                const parsed = JSON.parse(savedConversations);
+                // Convertir strings de fecha a objetos Date
+                const conversationsWithDates = parsed.map((conv: Conversation) => ({
+                    ...conv,
+                    lastUpdated: new Date(conv.lastUpdated),
+                    messages: conv.messages.map((msg: Message) => ({
+                        ...msg,
+                        timestamp: new Date(msg.timestamp)
+                    }))
+                }));
+                setConversations(conversationsWithDates);
+                
+                // Cargar la última conversación
+                if (conversationsWithDates.length > 0) {
+                    const lastConv = conversationsWithDates[0];
+                    setCurrentConversationId(lastConv.id);
+                    setMessages(lastConv.messages);
+                }
+            } catch (error) {
+                console.error('Error al cargar conversaciones:', error);
+            }
+        }
+
         // Cargar proveedores
         fetchProviders();
     }, []);
+
+    // Guardar conversación actual cuando cambian los mensajes
+    useEffect(() => {
+        if (messages.length === 0) return;
+
+        const saveConversation = () => {
+            const title = messages[0]?.content.slice(0, 50) || 'Nueva conversación';
+            
+            // Obtener conversaciones actuales del localStorage
+            const savedConversations = localStorage.getItem('conversations');
+            const existingConversations: Conversation[] = savedConversations 
+                ? JSON.parse(savedConversations) 
+                : [];
+
+            const conversationId = currentConversationId || Date.now().toString();
+            
+            const conversation: Conversation = {
+                id: conversationId,
+                title,
+                messages,
+                lastUpdated: new Date()
+            };
+
+            const existingIndex = existingConversations.findIndex(c => c.id === conversationId);
+
+            if (existingIndex >= 0) {
+                existingConversations[existingIndex] = conversation;
+            } else {
+                existingConversations.unshift(conversation);
+                setCurrentConversationId(conversationId);
+            }
+
+            // Guardar en localStorage y actualizar estado
+            localStorage.setItem('conversations', JSON.stringify(existingConversations));
+            setConversations(existingConversations);
+        };
+
+        saveConversation();
+    }, [messages, currentConversationId]);
+
+    const loadConversation = (conversationId: string) => {
+        // Cargar desde localStorage para obtener la versión más actualizada
+        const savedConversations = localStorage.getItem('conversations');
+        if (savedConversations) {
+            const parsed = JSON.parse(savedConversations);
+            const conv = parsed.find((c: Conversation) => c.id === conversationId);
+            if (conv) {
+                setCurrentConversationId(conv.id);
+                const messagesWithDates = conv.messages.map((msg: Message) => ({
+                    ...msg,
+                    timestamp: new Date(msg.timestamp)
+                }));
+                setMessages(messagesWithDates);
+            }
+        }
+    };
+
+    const deleteConversation = (conversationId: string) => {
+        // Eliminar del localStorage
+        const savedConversations = localStorage.getItem('conversations');
+        if (savedConversations) {
+            const parsed = JSON.parse(savedConversations);
+            const updatedConversations = parsed.filter((c: Conversation) => c.id !== conversationId);
+            localStorage.setItem('conversations', JSON.stringify(updatedConversations));
+            setConversations(updatedConversations);
+            
+            if (currentConversationId === conversationId) {
+                setCurrentConversationId(null);
+                setMessages([]);
+            }
+        }
+    };
+
+    const startNewConversation = () => {
+        setCurrentConversationId(null);
+        setMessages([]);
+    };
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -276,6 +299,13 @@ const ChatPage: React.FC = () => {
         }
         localStorage.setItem('modelConfig', JSON.stringify(modelConfig));
         setShowConfig(false);
+    }, [modelConfig]);
+
+    // Guardar configuración automáticamente cuando cambia (si está completa)
+    useEffect(() => {
+        if (modelConfig.apiKey && modelConfig.provider && modelConfig.model) {
+            localStorage.setItem('modelConfig', JSON.stringify(modelConfig));
+        }
     }, [modelConfig]);
 
     const handleLogout = useCallback(() => {
